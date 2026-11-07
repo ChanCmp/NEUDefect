@@ -1,0 +1,4 @@
+split,crazing,inclusion,patches,pitted_surface,rolled-in_scale,scratches
+test,71,99,95,45,61,58
+train,551,822,687,345,502,437
+valid,67,90,96,42,65,53

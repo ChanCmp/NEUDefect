@@ -1,0 +1,12 @@
+RINGKASAN EDA
+==================================================
+Rasio split dataset:
+  train: 1439 gambar (80.0%)
+  valid: 180 gambar (10.0%)
+  test: 180 gambar (10.0%)
+  total: 1799 gambar
+
+Kelas dengan box terbanyak di train: inclusion (822 box)
+Kelas dengan box tersedikit di train: pitted_surface (345 box)
+Rasio imbalance (max/min): 2.38x
+Kesimpulan: Dataset TIDAK seimbang secara jumlah box per kelas, meskipun jumlah GAMBAR per kelas relatif seimbang.

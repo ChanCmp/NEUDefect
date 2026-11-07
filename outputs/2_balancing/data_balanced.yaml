@@ -1,0 +1,18 @@
+names:
+- crazing
+- inclusion
+- patches
+- pitted_surface
+- rolled-in_scale
+- scratches
+nc: 6
+path: C:\Users\user\Downloads\ImagaProc\outputs\5_split\dataset_801010
+roboflow:
+  license: CC BY 4.0
+  project: defect-in-neu
+  url: https://universe.roboflow.com/defect-detection-0r2ml/defect-in-neu/dataset/2
+  version: 2
+  workspace: defect-detection-0r2ml
+test: test/images
+train: ../../2_balancing/train_balanced/images
+val: valid/images
