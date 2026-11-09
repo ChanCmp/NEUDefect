@@ -22,14 +22,15 @@ tugas object detection, bukan klasifikasi -> SMOTE tidak berlaku di sini
 (perlu disebutkan di Bab 2.6 paper).
 
 Output:
-  outputs/2_balancing/train_balanced/images/*.jpg
+  outputs/2_balancing/train_balanced/images/*
   outputs/2_balancing/train_balanced/labels/*.txt
-  outputs/2_balancing/balancing_report.csv -> untuk Tabel 3
+  outputs/2_balancing/balancing_report.csv
   outputs/2_balancing/data_balanced.yaml
 
 CARA PAKAI:
   python 2_balancing.py
-  python 2_balancing.py --data_dir ./path/to/dataset --out_dir ./path/to/train_balanced
+  Output default akan dibuat ulang setiap kali skrip dijalankan.
+  Untuk folder custom yang sudah berisi file, tambahkan --overwrite.
 ==========================================================================
 """
 
@@ -46,12 +47,16 @@ from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_DATA_DIR = PROJECT_DIR / "outputs" / "5_split" / "dataset_801010"
-DEFAULT_OUT_DIR = Path(__file__).resolve().parent / "outputs" / "2_balancing" / "train_balanced"
+DEFAULT_OUT_DIR = PROJECT_DIR / "outputs" / "2_balancing" / "train_balanced"
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
 def load_class_names(data_yaml_path):
     with open(data_yaml_path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
-    return data["names"]
+    class_names = data.get("names")
+    if not isinstance(class_names, list) or not class_names:
+        raise ValueError(f"Daftar nama kelas tidak valid di: {data_yaml_path}")
+    return class_names
 
 
 def get_image_classes(labels_dir):
@@ -78,11 +83,33 @@ def count_boxes_per_class(labels_dir, num_classes):
     for label_file in os.listdir(labels_dir):
         if not label_file.endswith(".txt"):
             continue
-        with open(os.path.join(labels_dir, label_file), "r") as f:
-            for line in f:
+        with open(os.path.join(labels_dir, label_file), "r", encoding="utf-8") as f:
+            for line_number, line in enumerate(f, start=1):
                 parts = line.strip().split()
-                if len(parts) >= 5:
-                    counts[int(parts[0])] += 1
+                if not parts:
+                    continue
+                if len(parts) != 5:
+                    raise ValueError(
+                        f"Label harus berisi 5 kolom: "
+                        f"{label_file}:{line_number}"
+                    )
+                try:
+                    class_id = int(parts[0])
+                    coordinates = [float(value) for value in parts[1:]]
+                except ValueError as exc:
+                    raise ValueError(
+                        f"Format label tidak valid: {label_file}:{line_number}"
+                    ) from exc
+                if not 0 <= class_id < num_classes:
+                    raise ValueError(
+                        f"ID kelas di luar rentang: {label_file}:{line_number}"
+                    )
+                if not all(0 <= value <= 1 for value in coordinates):
+                    raise ValueError(
+                        f"Koordinat YOLO harus berada pada rentang 0-1: "
+                        f"{label_file}:{line_number}"
+                    )
+                counts[class_id] += 1
     return counts
 
 
@@ -105,13 +132,22 @@ def get_augmentation_pipeline():
 
 def read_yolo_label(label_path):
     boxes, labels = [], []
-    with open(label_path, "r") as f:
-        for line in f:
+    with open(label_path, "r", encoding="utf-8") as f:
+        for line_number, line in enumerate(f, start=1):
             parts = line.strip().split()
-            if len(parts) < 5:
+            if not parts:
                 continue
-            labels.append(int(parts[0]))
-            boxes.append([float(x) for x in parts[1:5]])
+            if len(parts) != 5:
+                raise ValueError(
+                    f"Label harus berisi 5 kolom: {label_path}:{line_number}"
+                )
+            try:
+                labels.append(int(parts[0]))
+                boxes.append([float(x) for x in parts[1:5]])
+            except ValueError as exc:
+                raise ValueError(
+                    f"Format label tidak valid: {label_path}:{line_number}"
+                ) from exc
     return boxes, labels
 
 
@@ -123,15 +159,18 @@ def write_yolo_label(label_path, boxes, labels):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", default=str(DEFAULT_DATA_DIR))
-    parser.add_argument("--out_dir", default=str(DEFAULT_OUT_DIR),
-                         help="Folder output train yang sudah diseimbangkan")
+    parser.add_argument("--data_dir", type=Path, default=DEFAULT_DATA_DIR,
+                        help="Folder dataset hasil split 80/10/10")
+    parser.add_argument("--out_dir", type=Path, default=DEFAULT_OUT_DIR,
+                        help="Folder output train yang sudah diseimbangkan")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--overwrite", action="store_true",
+                        help="Ganti isi folder output balancing yang sudah ada")
     args = parser.parse_args()
 
     random.seed(args.seed)
 
-    data_dir = Path(args.data_dir).resolve()
+    data_dir = args.data_dir.resolve()
     data_yaml = data_dir / "data.yaml"
     if not data_yaml.is_file():
         raise FileNotFoundError(f"Konfigurasi dataset tidak ditemukan: {data_yaml}")
@@ -145,21 +184,52 @@ def main():
     if not train_labels_dir.is_dir():
         raise FileNotFoundError(f"Folder label train tidak ditemukan: {train_labels_dir}")
 
-    out_dir = Path(args.out_dir).resolve()
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_images_dir = os.path.join(out_dir, "images")
-    out_labels_dir = os.path.join(out_dir, "labels")
-    os.makedirs(out_images_dir, exist_ok=True)
-    os.makedirs(out_labels_dir, exist_ok=True)
+    out_dir = args.out_dir.resolve()
+    if (out_dir == data_dir or out_dir in data_dir.parents
+            or data_dir in out_dir.parents):
+        raise ValueError("Folder output harus terpisah dari folder dataset sumber.")
+    if out_dir.exists() and not out_dir.is_dir():
+        raise NotADirectoryError(f"Folder output bukan direktori: {out_dir}")
+    overwrite = args.overwrite or out_dir == DEFAULT_OUT_DIR.resolve()
+    if out_dir.exists() and any(out_dir.iterdir()):
+        if not overwrite:
+            raise FileExistsError(
+                f"Folder output sudah berisi file: {out_dir}. "
+                "Pilih --out_dir lain atau tambahkan --overwrite."
+            )
+        shutil.rmtree(out_dir)
+
+    out_images_dir = out_dir / "images"
+    out_labels_dir = out_dir / "labels"
+    out_images_dir.mkdir(parents=True, exist_ok=True)
+    out_labels_dir.mkdir(parents=True, exist_ok=True)
+    image_paths = sorted(
+        path for path in train_images_dir.iterdir()
+        if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+    )
+    if not image_paths:
+        raise ValueError(f"Tidak ada gambar train di: {train_images_dir}")
+    image_paths_by_stem = {path.stem: path for path in image_paths}
+    if len(image_paths_by_stem) != len(image_paths):
+        raise ValueError("Ada beberapa gambar train dengan nama dasar yang sama.")
+    missing_labels = [
+        path for path in image_paths
+        if not (train_labels_dir / f"{path.stem}.txt").is_file()
+    ]
+    if missing_labels:
+        raise FileNotFoundError(
+            f"Label tidak ditemukan untuk {len(missing_labels)} gambar; "
+            f"contoh: {missing_labels[0].name}"
+        )
 
     # --- Step 1: salin dulu seluruh train asli ke folder balanced ---
     print("Menyalin train set asli ke folder balanced...")
-    for img_file in os.listdir(train_images_dir):
-        shutil.copy(os.path.join(train_images_dir, img_file),
-                    os.path.join(out_images_dir, img_file))
-    for label_file in os.listdir(train_labels_dir):
-        shutil.copy(os.path.join(train_labels_dir, label_file),
-                    os.path.join(out_labels_dir, label_file))
+    for img_path in image_paths:
+        shutil.copy2(img_path, out_images_dir / img_path.name)
+        shutil.copy2(
+            train_labels_dir / f"{img_path.stem}.txt",
+            out_labels_dir / f"{img_path.stem}.txt",
+        )
 
     # --- Step 2: hitung distribusi box SEBELUM balancing ---
     before_counts = count_boxes_per_class(train_labels_dir, num_classes)
@@ -167,7 +237,9 @@ def main():
     for cid, cname in enumerate(class_names):
         print(f"  {cname}: {before_counts.get(cid, 0)}")
 
-    target_count = max(before_counts.values())
+    target_count = max(before_counts.values(), default=0)
+    if target_count == 0:
+        raise ValueError("Train set tidak memiliki bounding box yang dapat diseimbangkan.")
     print(f"\nTarget jumlah box per kelas (mengikuti kelas mayoritas): {target_count}")
 
     # --- Step 3: cari gambar per kelas untuk oversampling ---
@@ -201,33 +273,30 @@ def main():
         for i in range(n_duplicates_needed):
             src_img_name = random.choice(candidate_images)
 
-            # cari ekstensi file gambar aslinya
-            matches = [f for f in os.listdir(train_images_dir)
-                       if os.path.splitext(f)[0] == src_img_name]
-            if not matches:
+            src_img_path = image_paths_by_stem.get(src_img_name)
+            if src_img_path is None:
                 continue
-            src_img_file = matches[0]
-            ext = os.path.splitext(src_img_file)[1]
+            label_path = train_labels_dir / f"{src_img_name}.txt"
 
-            img_path = os.path.join(train_images_dir, src_img_file)
-            label_path = os.path.join(train_labels_dir, src_img_name + ".txt")
-
-            image = cv2.imread(img_path)
+            image = cv2.imread(str(src_img_path))
+            if image is None:
+                raise ValueError(f"Gambar tidak dapat dibaca: {src_img_path}")
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             boxes, labels = read_yolo_label(label_path)
 
             try:
                 augmented = transform(image=image, bboxes=boxes, class_labels=labels)
-            except Exception as e:
-                print(f"  Lewati {src_img_name} karena error augmentasi: {e}")
+            except (ValueError, RuntimeError) as exc:
+                print(f"  Lewati {src_img_name} karena error augmentasi: {exc}")
                 continue
 
-            new_name = f"{src_img_name}_aug{i}"
-            new_img_path = os.path.join(out_images_dir, new_name + ext)
-            new_label_path = os.path.join(out_labels_dir, new_name + ".txt")
+            new_name = f"{src_img_name}_class{cid}_aug{i}"
+            new_img_path = out_images_dir / f"{new_name}{src_img_path.suffix}"
+            new_label_path = out_labels_dir / f"{new_name}.txt"
 
             aug_image_bgr = cv2.cvtColor(augmented["image"], cv2.COLOR_RGB2BGR)
-            cv2.imwrite(new_img_path, aug_image_bgr)
+            if not cv2.imwrite(str(new_img_path), aug_image_bgr):
+                raise OSError(f"Gambar hasil augmentasi gagal disimpan: {new_img_path}")
             write_yolo_label(new_label_path, augmented["bboxes"], augmented["class_labels"])
 
             for l in augmented["class_labels"]:
@@ -255,13 +324,11 @@ def main():
         data_cfg = yaml.safe_load(f)
 
     balanced_yaml = dict(data_cfg)
+    balanced_yaml["train"] = str(out_images_dir.resolve())
     balanced_yaml["path"] = str(data_dir)
-    balanced_yaml["train"] = os.path.relpath(out_images_dir, data_dir).replace(os.sep, "/")
-    balanced_yaml["val"] = "valid/images"
-    balanced_yaml["test"] = "test/images"
     balanced_yaml_path = out_dir.parent / "data_balanced.yaml"
     with open(balanced_yaml_path, "w", encoding="utf-8") as f:
-        yaml.dump(balanced_yaml, f)
+        yaml.safe_dump(balanced_yaml, f, sort_keys=False)
     print(f"data.yaml untuk training balanced tersimpan di: {balanced_yaml_path}")
 
 

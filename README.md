@@ -87,6 +87,9 @@ Menghasilkan folder balanced, file
 `outputs/2_balancing/data_balanced.yaml`, dan
 `outputs/2_balancing/balancing_report.csv` (Tabel 3).
 Data gambar/label hasil balancing berada di `outputs/2_balancing/train_balanced/`.
+Jika folder output sudah berisi hasil run sebelumnya, gunakan
+`python 2_balancing.py` akan membuat ulang output default secara otomatis.
+Untuk folder custom yang sudah berisi hasil, gunakan `--overwrite`.
 
 ## 3. Training (2 skenario otomatis: unbalanced & balanced)
 
@@ -119,7 +122,8 @@ python 4_evaluate_and_visualize.py \
     --split test
 ```
 
-Hasil tiap model/split disimpan terpisah di `outputs/4_evaluate/`.
+CSV metrik, grid prediksi, dan output Ultralytics disimpan di
+`outputs/4_evaluate/<run>_<split>/`.
 Jalankan juga dengan `--split valid` untuk mengisi Tabel 5 (validation).
 
 ## Checklist file yang perlu diambil untuk paper
