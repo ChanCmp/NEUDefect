@@ -1,0 +1,28 @@
+Assignment 6 - Ringkasan eksekusi
+Dataset: C:\Users\user\Downloads\NEUDefect\project_akhir_yolov8\Defect in NEU.v2i.yolov8
+Seed split: 42
+Ukuran crop: 32x32; fitur: HOG
+Gambar ditemukan: 1799
+Gambar usable: 1799
+Gambar tanpa label: 0
+Gambar dengan label kosong: 0
+Duplikat exact dilewati: 0
+Bounding box usable: 4186
+Gambar development/test: 1439/360
+Crop development/test: 3323/863
+KNN terbaik berdasarkan macro-F1 CV: 1
+SVM terbaik berdasarkan macro-F1 CV: kernel=rbf,C=1.0,gamma=scale
+
+Distribusi crop:
+          class  development_crops  test_crops
+        crazing                543         146
+      inclusion                806         205
+        patches                701         177
+ pitted_surface                341          91
+rolled-in_scale                498         130
+      scratches                434         114
+
+Metrik test:
+model                configuration  accuracy  precision_macro  recall_macro  f1_macro
+  KNN                          k=1  0.534183         0.619195      0.537830  0.541349
+  SVM kernel=rbf,C=1.0,gamma=scale  0.785632         0.765060      0.758143  0.754411
