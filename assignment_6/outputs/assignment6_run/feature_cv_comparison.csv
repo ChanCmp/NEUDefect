@@ -1,3 +1,0 @@
-model,HOG_best_configuration,HOG_best_macro_f1_cv,PCA_best_configuration,PCA_best_macro_f1_cv
-KNN,k=3,0.4989432125704796,k=1,0.3367059802381153
-SVM,"kernel=rbf,C=10.0,gamma=scale",0.7348923658532777,"kernel=rbf,C=10.0,gamma=scale",0.7121056830320251
