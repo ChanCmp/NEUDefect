@@ -1,19 +1,35 @@
-Assignment 6 - Ringkasan eksekusi
+Assignment 6 - HOG pipeline run summary
 Dataset: C:\Users\user\Downloads\NEUDefect\project_akhir_yolov8\Defect in NEU.v2i.yolov8
-Seed split: 42
-Ukuran crop: 32x32; fitur: HOG
-Gambar ditemukan: 1799
-Gambar usable: 1799
-Gambar tanpa label: 0
-Gambar dengan label kosong: 0
-Duplikat exact dilewati: 0
-Bounding box usable: 4186
-Gambar development/test: 1439/360
-Crop development/test: 3323/863
-KNN terbaik berdasarkan macro-F1 CV: 1
-SVM terbaik berdasarkan macro-F1 CV: kernel=rbf,C=1.0,gamma=scale
+Seed: 42
+Dataset images found/usable: 1799/1799
+Missing label files: 0
+Unreadable images: 0
+Images with empty labels: 0
+Label files without images: 0
+Exact duplicate images skipped: 0
+Usable YOLO boxes: 4186
+Empty crops: 0
+Duplicate crops retained: 3
+Crop size: 32x32; HOG: {'orientations': 9, 'pixels_per_cell': (8, 8), 'cells_per_block': (2, 2), 'block_norm': 'L2-Hys'}
+Scaler: StandardScaler fit on undersampled training data only
+Balance: random undersampling to minority count in each training fold and final development fit
+Test distribution: unchanged (imbalanced)
+Development/test images: 1439/360
+Development/test crops: 3323/863
+Best KNN by development macro-F1: 3
+Best SVM by development macro-F1: kernel=rbf,C=10.0,gamma=scale
 
-Distribusi crop:
+Image-level counts by dominant class:
+split            development  test
+dominant_class
+crazing                  240    60
+inclusion                265    66
+patches                  257    65
+pitted_surface           215    54
+rolled-in_scale          240    60
+scratches                222    55
+
+Crop distribution:
           class  development_crops  test_crops
         crazing                543         146
       inclusion                806         205
@@ -22,7 +38,23 @@ Distribusi crop:
 rolled-in_scale                498         130
       scratches                434         114
 
-Metrik test:
-model                configuration  accuracy  precision_macro  recall_macro  f1_macro
-  KNN                          k=1  0.534183         0.619195      0.537830  0.541349
-  SVM kernel=rbf,C=1.0,gamma=scale  0.785632         0.765060      0.758143  0.754411
+Development-only HOG/PCA CV comparison:
+model        HOG_best_configuration  HOG_best_macro_f1_cv        PCA_best_configuration  PCA_best_macro_f1_cv
+  KNN                           k=3              0.498943                           k=1              0.336706
+  SVM kernel=rbf,C=10.0,gamma=scale              0.734892 kernel=rbf,C=10.0,gamma=scale              0.712106
+
+Development CV summary:
+model                 configuration  accuracy_mean  accuracy_std  precision_macro_mean  precision_macro_std  recall_macro_mean  recall_macro_std  f1_macro_mean  f1_macro_std  balanced_accuracy_mean  balanced_accuracy_std
+  KNN                           k=3       0.489313      0.012883              0.603399             0.006876           0.510470          0.016438       0.498943      0.014355                0.510470               0.016438
+  KNN                           k=1       0.482695      0.008712              0.591191             0.007648           0.502706          0.011352       0.496269      0.010568                0.502706               0.011352
+  KNN                           k=5       0.481481      0.013045              0.613002             0.003932           0.503060          0.017597       0.489088      0.012671                0.503060               0.017597
+  KNN                           k=7       0.480578      0.018460              0.619094             0.010382           0.502041          0.021523       0.484584      0.019590                0.502041               0.021523
+  KNN                           k=9       0.478472      0.017708              0.627077             0.007021           0.500321          0.020503       0.480662      0.017675                0.500321               0.020503
+  SVM kernel=rbf,C=10.0,gamma=scale       0.757435      0.015126              0.734459             0.015297           0.739837          0.016563       0.734892      0.016247                0.739837               0.016563
+  SVM  kernel=rbf,C=1.0,gamma=scale       0.759246      0.008832              0.733905             0.011404           0.740201          0.010652       0.733318      0.011114                0.740201               0.010652
+  SVM           kernel=linear,C=1.0       0.650928      0.012084              0.633072             0.009177           0.627058          0.011327       0.627081      0.009726                0.627058               0.011327
+
+Final test metrics:
+model                 configuration  accuracy  balanced_accuracy  precision_macro  recall_macro  f1_macro
+  KNN                           k=3  0.488992           0.500685         0.602288      0.500685  0.502772
+  SVM kernel=rbf,C=10.0,gamma=scale  0.753187           0.734407         0.732385      0.734407  0.731219
