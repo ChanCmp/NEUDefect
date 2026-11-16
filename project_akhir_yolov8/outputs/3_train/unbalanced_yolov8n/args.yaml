@@ -1,7 +1,7 @@
 task: detect
 mode: train
 model: yolov8n.pt
-data: C:\Users\user\Downloads\NEUDefect\outputs\5_split\dataset_801010\data.yaml
+data: C:\Users\user\Downloads\NEUDefect\project_akhir_yolov8\outputs\5_split\dataset_801010\data.yaml
 epochs: 100
 time: null
 patience: 20
@@ -12,7 +12,7 @@ save_period: -1
 cache: false
 device: ""
 workers: 8
-project: C:\Users\user\Downloads\NEUDefect\outputs\3_train
+project: C:\Users\user\Downloads\NEUDefect\project_akhir_yolov8\outputs\3_train
 name: unbalanced_yolov8n
 exist_ok: true
 pretrained: true
@@ -112,4 +112,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: tracktrack.yaml
-save_dir: C:\Users\user\Downloads\NEUDefect\outputs\3_train\unbalanced_yolov8n
+save_dir: C:\Users\user\Downloads\NEUDefect\project_akhir_yolov8\outputs\3_train\unbalanced_yolov8n
